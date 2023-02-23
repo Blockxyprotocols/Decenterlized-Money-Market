@@ -1,0 +1,45 @@
+// SPDX-License-Identifier: MIT
+
+pragma solidity 0.8.13;
+
+import "https://github.com/Blockxyprotocols/MultisigWallet/blob/main/IBEP20.sol";
+import "https://github.com/Blockxyprotocols/MultisigWallet/blob/main/Safemath.sol";
+
+library HelptoTransfer {
+
+     function safeTransfer(IBEP20 _token, address _to, uint256 _amount) internal returns (uint256 amountReceived) {
+        if (_amount > 0) {
+            uint256 balanceBefore = _token.balanceOf(_to);
+            (bool success, bytes memory data) = address(_token).call(abi.encodeWithSelector(_token.transfer.selector, _to, _amount));
+            require(success && (data.length == 0 || abi.decode(data, (bool))), "TF");
+            uint256 balanceAfter = _token.balanceOf(_to);
+            require(balanceAfter > balanceBefore, "TF");
+            amountReceived = balanceAfter - balanceBefore;
+        }
+    }
+
+    function safeTransferFrom(IBEP20 _token, address _from, address _to, uint256 _amount) internal returns (uint256 amountReceived) {
+        if (_amount > 0) {
+            uint256 balanceBefore = _token.balanceOf(_to);
+            (bool success, bytes memory data) = address(_token).call(abi.encodeWithSelector(_token.transferFrom.selector, _from, _to, _amount));
+            require(success && (data.length == 0 || abi.decode(data, (bool))), "TFF");
+            uint256 balanceAfter = _token.balanceOf(_to);
+            require(balanceAfter > balanceBefore, "TFF");
+            amountReceived = balanceAfter - balanceBefore;
+        }
+    }
+
+    function safeApprove(IBEP20 _token, address _spender, uint256 _amount) internal returns (uint256) {
+        uint256 allowanceBefore = _token.allowance(address(this), _spender);
+        bool success;
+        if (allowanceBefore != 0) {
+            (success, ) = address(_token).call(abi.encodeWithSelector(_token.approve.selector, _spender, 0));
+            require(success, "AF");
+        }
+        (success, ) = address(_token).call(abi.encodeWithSelector(_token.approve.selector, _spender, _amount));
+        require(success, "AF");
+        uint256 allowanceAfter = _token.allowance(address(this), _spender);
+        require(allowanceAfter == _amount, "AF");
+        return allowanceAfter;
+    }
+}
